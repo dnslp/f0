@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harmonic Frequency Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    input[type="number"] {
+      width: 100px;
+    }
+    button {
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+    li {
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      background-color: #f2f2f2;
+      border: 1px solid #ccc;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .root-chakra {
+      background-color: #ff0000; /* Red */
+      color: white;
+    }
+    .sacral-chakra {
+      background-color: #ffa500; /* Orange */
+    }
+    .solar-plexus-chakra {
+      background-color: #ffff00; /* Yellow */
+    }
+    .heart-chakra {
+      background-color: #008000; /* Green */
+      color: white;
+    }
+    .throat-chakra {
+      background-color: #0000ff; /* Blue */
+      color: white;
+    }
+    .third-eye-chakra {
+      background-color: #4b0082; /* Indigo */
+      color: white;
+    }
+    .crown-chakra {
+      background-color: #800080; /* Purple */
+      color: white;
+    }
+    audio {
+      display: none;
+    }
+    .sound-toggle {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Harmonic Frequency Calculator</h1>
+  <label for="baseFrequency">Base Frequency (Hz):</label>
+  <input type="number" id="baseFrequency" min="0" step="0.01">
+  <button onclick="calculateHarmonics()">Calculate</button>
+
+  <h2>Harmonic Pitches:</h2>
+  <ul id="harmonicsList"></ul>
+
+  <script>
+    const chakraColors = {
+      "Root Chakra": "root-chakra",
+      "Sacral Chakra": "sacral-chakra",
+      "Solar Plexus Chakra": "solar-plexus-chakra",
+      "Heart Chakra": "heart-chakra",
+      "Throat Chakra": "throat-chakra",
+      "Third Eye Chakra": "third-eye-chakra",
+      "Crown Chakra": "crown-chakra"
+    };
+
+    const chakraFrequencies = {
+      "Root Chakra": 396,
+      "Sacral Chakra": 417,
+      "Solar Plexus Chakra": 528,
+      "Heart Chakra": 639,
+      "Throat Chakra": 741,
+      "Third Eye Chakra": 852,
+      "Crown Chakra": 963
+    };
+
+    let audioContext;
+    let oscillators = {};
+
+    function calculateHarmonics() {
+      const baseFrequency = parseFloat(document.getElementById('baseFrequency').value);
+      if (isNaN(baseFrequency)) {
+        alert("Please enter a valid number for the base frequency.");
+        return;
+      }
+
+      const harmonicsList = document.getElementById('harmonicsList');
+      harmonicsList.innerHTML = ''; // Clear previous results
+
+      for (let i = 1; i <= 10; i++) {
+        const harmonicFrequency = baseFrequency * i;
+        const pitch = frequencyToPitch(harmonicFrequency);
+        const closestChakra = findClosestChakra(harmonicFrequency);
+        const differenceHz = Math.abs(harmonicFrequency - chakraFrequencies[closestChakra]);
+        const listItem = document.createElement('li');
+        listItem.classList.add(chakraColors[closestChakra]);
+
+        const soundToggle = document.createElement('input');
+        soundToggle.type = 'checkbox';
+        soundToggle.classList.add('sound-toggle');
+        soundToggle.addEventListener('change', () => {
+          if (soundToggle.checked) {
+            playSample(harmonicFrequency);
+          } else {
+            stopSample(harmonicFrequency);
+          }
+        });
+        listItem.appendChild(soundToggle);
+
+        const volumeSlider = document.createElement('input');
+        volumeSlider.type = 'range';
+        volumeSlider.min = 0;
+        volumeSlider.max = 100;
+        volumeSlider.value = 50;
+        volumeSlider.addEventListener('input', () => adjustVolume(volumeSlider.value, harmonicFrequency));
+        listItem.appendChild(volumeSlider);
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = `Harmonic ${i}: ${pitch} (${harmonicFrequency.toFixed(2)} Hz) - Closest Chakra: ${closestChakra} (${chakraFrequencies[closestChakra]} Hz) - Difference: ${differenceHz.toFixed(2)} Hz`;
+        listItem.appendChild(textSpan);
+
+        harmonicsList.appendChild(listItem);
+      }
+    }
+
+    function frequencyToPitch(frequency) {
+      const A4 = 440; // Standard pitch of A4 in Hz
+      const semitoneRatio = Math.pow(2, 1/12); // Ratio between semitones
+      const stepsFromA4 = 12 * (Math.log2(frequency) - Math.log2(A4));
+      const stepsFromA4Rounded = Math.round(stepsFromA4);
+      const centsOffset = (stepsFromA4 - stepsFromA4Rounded) * 100;
+      const notes = ['A', 'A#/Bb', 'B', 'C', 'C#/Db', 'D', 'D#/Eb', 'E', 'F', 'F#/Gb', 'G', 'G#/Ab'];
+      const octave = 4 + Math.floor(stepsFromA4Rounded / 12);
+      const noteIndex = (stepsFromA4Rounded % 12 + 12) % 12; // Ensure positive value for modulo operation
+      return notes[noteIndex] + octave + (centsOffset ? ` (${centsOffset.toFixed(2)} cents)` : '');
+    }
+
+    function findClosestChakra(frequency) {
+      let closestChakra = "";
+      let minDifference = Infinity;
+      for (const [chakra, chakraFrequency] of Object.entries(chakraFrequencies)) {
+        const difference = Math.abs(frequency - chakraFrequency);
+        if (difference < minDifference) {
+          minDifference = difference;
+          closestChakra = chakra;
+        }
+      }
+      return closestChakra;
+    }
+
+    function playSample(frequency) {
+      if (!audioContext) {
+        audioContext = new AudioContext();
+      }
+
+      if (!oscillators[frequency]) {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.start();
+        oscillators[frequency] = { oscillator, gainNode };
+      }
+    }
+
+    function stopSample(frequency) {
+      if (oscillators[frequency]) {
+        oscillators[frequency].oscillator.stop();
+        oscillators[frequency].oscillator.disconnect();
+        oscillators[frequency].gainNode.disconnect();
+        delete oscillators[frequency];
+      }
+    }
+
+    function adjustVolume(volume, frequency) {
+      if (oscillators[frequency]) {
+        oscillators[frequency].gainNode.gain.value = volume / 100;
+      }
+    }
+  </script>
+</body>
+</html>
